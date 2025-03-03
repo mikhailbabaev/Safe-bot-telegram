@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: safe_bot
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"  # Если бот использует этот порт
+    depends_on:
+      - db
+    networks:
+      - safe_network
+    env_file:
+      - ./bot/.env  # Подключаем .env с нужными переменными
+
+  db:
+    image: postgres:13
+    container_name: safe_db
+    env_file:
+      - ./bot/.env  # Подключаем .env для использования переменных для подключения
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - safe_network
+
+volumes:
+  postgres_data:
+
+networks:
+  safe_network:
+    driver: bridge

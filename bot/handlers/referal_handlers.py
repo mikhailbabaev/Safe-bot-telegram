@@ -29,7 +29,6 @@ async def cashback_menu(callback: types.CallbackQuery, session: AsyncSession):
     )
 
 
-
 @ref_router.callback_query(F.data == "use_promocode")
 async def start_handlers(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer(show_alert=False)
@@ -52,9 +51,12 @@ async def process_input(message: types.Message, state: FSMContext, session: Asyn
         if check_promo:
             await message.answer(("У вас уже активирован промокод со скидкой!"))
         else:
-            await set_promocode_usage(session, id_user_from_db)
-            await set_promocode_is_active(session, user_tg_id, promocode)
-            await message.answer(f"Промокод {promocode} успешно активирован!", reply_markup=to_start_menu)
+            check_exist_promo = await set_promocode_usage(session, id_user_from_db, promocode)
+            if check_exist_promo:
+                await set_promocode_is_active(session, user_tg_id, promocode)
+                await message.answer(f"Промокод {promocode} успешно активирован!", reply_markup=to_start_menu)
+            else:
+                await message.answer("Такого промокода выдано не было. Проверьте корректность!")
     await state.clear()
 
 
@@ -67,7 +69,6 @@ async def withdraw_money(callback: types.CallbackQuery):
         reply_markup=referal_getout_kb,
         parse_mode="HTML"
     )
-
 
 
 @ref_router.callback_query(F.data == "copy_promocode")

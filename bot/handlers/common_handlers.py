@@ -23,12 +23,15 @@ async def cmd_start(message: Message, session: AsyncSession):
     last_name = message.from_user.last_name
     is_bot = message.from_user.is_bot
     user_auth = await get_user_by_tg_id(session, tg_id)
-    achievement_text = await get_user_achievement_text(session, tg_id)
-    start_menu.inline_keyboard[3][0].text = achievement_text
+
     if user_auth:
+        achievement_text = await get_user_achievement_text(session, tg_id)
+        start_menu.inline_keyboard[3][0].text = achievement_text
         await message.answer(WELCOME_MESSAGE, reply_markup=start_menu)
     else:
         await create_user(session, tg_id, first_name, last_name, username, is_bot)
+        achievement_text = await get_user_achievement_text(session, tg_id)
+        start_menu.inline_keyboard[3][0].text = achievement_text
         await message.answer(WELCOME_MESSAGE, reply_markup=start_menu)
 
 

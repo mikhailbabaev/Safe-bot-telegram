@@ -48,7 +48,14 @@ async def set_promocode_given(session: AsyncSession, tg_id: int):
     await session.commit()
 
 
-async def set_promocode_usage(session: AsyncSession, tg_id: int):
+async def set_promocode_usage(session: AsyncSession, tg_id: int, promocode: str):
+    # Ищем запись о пользователе с указанным промокодом
+    result = await session.execute(select(User).where(User.promocode == promocode))
+    promocode_entry = result.scalar_one_or_none()  # Получаем запись или None, если не найдено
+
+    if not promocode_entry:  # Если промокод не найден
+        return False
+
     stmt = (
         update(User)
         .where(User.tg_id == tg_id)
@@ -56,6 +63,8 @@ async def set_promocode_usage(session: AsyncSession, tg_id: int):
     )
     await session.execute(stmt)
     await session.commit()
+    return True
+
 
 
 async def get_tg_id_by_promocode(session: AsyncSession, promocode: str):

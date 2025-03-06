@@ -1,40 +1,58 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from database.models import *
+from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    AsyncEngine,
+    async_sessionmaker,
+    AsyncSession,
+)
+from .base import Base
+from . import models
+
 
 class DatabaseHelper:
-    def __init__(self, url: str, echo: bool = False,
-                 echo_pool: bool = False, pool_size: int = 5,
-                 max_overflow: int = 10) -> None:
-        self.engine = create_async_engine(
+    def __init__(
+        self,
+        url: str,
+        echo: bool = False,
+        pool_size: int = 5,
+        max_overflow: int = 10,
+    ) -> None:
+        self.engine: AsyncEngine = create_async_engine(
             url=url,
             echo=echo,
-            echo_pool=echo_pool,
             pool_size=pool_size,
-            max_overflow=max_overflow
+            max_overflow=max_overflow,
         )
-        self.session_factory = async_sessionmaker(
+        self.session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
             bind=self.engine,
             autoflush=False,
             autocommit=False,
-            expire_on_commit=False
+            expire_on_commit=False,
         )
+
+    async def dispose(self) -> None:
+        await self.engine.dispose()
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
-        """Асинхронный контекстный менеджер для сессии."""
+        """Используем asynccontextmanager для корректной работы с async with."""
         async with self.session_factory() as session:
             yield session
-            await session.commit()
 
-    async def init_db(self) -> None:
-        """Метод для инициализации базы данных (например, создание таблиц)."""
 
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+async def init_db(db_helper):
+    async with db_helper.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    async def dispose(self) -> None:
-        """Ожидаем завершения работы с соединением."""
-        await self.engine.dispose()
+
+def create_db_helper(url: str) -> DatabaseHelper:
+    """Функция для создания и настройки DatabaseHelper."""
+    return DatabaseHelper(
+        url=url,
+        echo=False,
+        pool_size=5,
+        max_overflow=10,
+    )
+
 

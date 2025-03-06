@@ -1,18 +1,19 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 
-from keyboards import start_menu
-from templates import WELCOME_MESSAGE
+from keyboards.faq_kb import FAQ
+from templates import FAQ_TEXT
 
 
 faq_router = Router()
 
-@faq_router.callback_query(F.data == "go_to_start_menu")
-async def return_to_main_menu(callback: CallbackQuery):
-    """Возвращаем в главное меню с обновленным текстом"""
 
+@faq_router.callback_query(F.data == "FAQ")
+async def show_faq(callback: CallbackQuery):
+    """Показываем информацию о FAQ с кнопкой возврата в главное меню"""
     await callback.message.answer(
-        WELCOME_MESSAGE,
-        reply_markup=start_menu
+        FAQ_TEXT,
+        reply_markup=FAQ,
+        parse_mode="HTML"
     )
     await callback.answer()

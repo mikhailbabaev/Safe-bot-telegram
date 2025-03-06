@@ -8,20 +8,21 @@ services:
       - PYTHONPATH=/app
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"  # Если бот использует этот порт
     depends_on:
       - db
     networks:
       - safe_network
     env_file:
-      - ./bot/.env  # Подключаем .env с нужными переменными
+      - .env
+    command: >
+      sh -c "while ! pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done;
+      python bot/bot.py"
 
   db:
     image: postgres:13
     container_name: safe_db
     env_file:
-      - ./bot/.env  # Подключаем .env для использования переменных для подключения
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

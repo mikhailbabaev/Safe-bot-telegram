@@ -3,28 +3,25 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from database import DatabaseHelper
-from handlers.handlers import router
 
-
-# URL подключения к базе данных
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql+asyncpg://postgres:Evgeniy-1@localhost/skum_bot_db')
+from handlers import router, faq_router, check_router, ref_router, achivements_router, pay_router
+from middleware.db_middleware import DatabaseMiddleware
+from database.db_helper import init_db, create_db_helper
 
 
 async def main():
     load_dotenv()
-    db_helper = DatabaseHelper(DATABASE_URL, echo=False)
-    await db_helper.init_db()
-
-    # Создаем объект бота и диспетчера
     bot = Bot(token=os.getenv('TOKEN'))
     dp = Dispatcher()
 
-    # Подключаем роутеры
-    dp.include_router(router)
+    db_url = os.getenv("DB")
+    db_helper = create_db_helper(db_url)
 
+    await init_db(db_helper)
+    dp.update.middleware(DatabaseMiddleware(db_helper))
+
+    dp.include_routers(router, faq_router, check_router, ref_router, achivements_router, pay_router)
     await dp.start_polling(bot)
-    await db_helper.dispose()
 
 
 if __name__ == '__main__':
@@ -36,6 +33,6 @@ if __name__ == '__main__':
         ]
     )
     try:
-        asyncio.run(main())  # Запускаем асинхронную функцию main
+        asyncio.run(main())
     except KeyboardInterrupt:
         print('Бот выключен!')

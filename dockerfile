@@ -4,6 +4,9 @@ FROM python:3.12
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
+# Устанавливаем системные зависимости (если нужно)
+RUN apt-get update && apt-get install -y libpq-dev
+
 # Копируем только файл зависимостей
 COPY requirements.txt .
 
@@ -15,6 +18,10 @@ COPY . .
 
 # Устанавливаем переменные окружения
 ENV PYTHONUNBUFFERED=1
+
+# Создание виртуального окружения и активация его (если нужно)
+RUN python -m venv venv
+ENV PATH="/app/venv/bin:$PATH"
 
 # Команда для запуска бота
 CMD ["python", "bot/bot.py"]

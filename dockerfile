@@ -7,6 +7,9 @@ WORKDIR /app
 # Устанавливаем системные зависимости (если нужно)
 RUN apt-get update && apt-get install -y libpq-dev
 
+# Дополнительно устанавливаем PostgreSQL клиент для использования pg_isready
+RUN apt-get update && apt-get install -y postgresql-client
+
 # Копируем только файл зависимостей
 COPY requirements.txt .
 

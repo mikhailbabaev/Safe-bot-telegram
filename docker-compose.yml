@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: safe_bot
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    networks:
+      - safe_network
+    env_file:
+      - .env
+    command: >
+      sh -c "while ! pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done;
+      python bot/bot.py"
+
+  db:
+    image: postgres:13
+    container_name: safe_db
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - safe_network
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - safe_network
+
+volumes:
+  postgres_data:
+  pgadmin_data:  # добавляем этот том
+
+networks:
+  safe_network:
+    driver: bridge

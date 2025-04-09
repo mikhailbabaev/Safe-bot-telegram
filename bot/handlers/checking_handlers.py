@@ -18,10 +18,7 @@ async def send_typing_effect(message: Message, text_blocks: dict, delay: float =
     sent_message = await message.answer("Загрузка...", parse_mode="HTML")
 
     for key in sorted(text_blocks.keys()):
-        # Обновляем полный текст, добавляя новый блок
         full_text = "\n".join(list(text_blocks.values())[:key])
-
-        # Обновляем сообщение с новым текстом
         await sent_message.edit_text(full_text.strip(), parse_mode="HTML")
         await asyncio.sleep(delay)
 

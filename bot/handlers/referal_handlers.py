@@ -1,9 +1,4 @@
-import asyncio
-import random
-import os
 from aiogram import Router, F, types
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 from handlers.states import MyStates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from keyboards.common_keyboards import to_start_menu
 from keyboards.referal_kb import referal_getout_kb, referal_kb
 from templates import REFERAL, REFERAL_GET_OUT, PROMOCODE_GIVEN, LINK
-from database.requests import get_promocode_by_tg_id, set_promocode_given, get_user_by_tg_id, set_promocode_usage, get_tg_id_by_promocode, set_promocode_is_active, check_promocode_is_active, set_user_action
+from database.requests import (
+    get_promocode_by_tg_id,
+    set_promocode_given,
+    set_promocode_usage,
+    get_tg_id_by_promocode,
+    set_promocode_is_active,
+    check_promocode_is_active,
+    set_user_action,
+)
+
 
 ref_router = Router()
 
@@ -40,14 +44,11 @@ async def start_handlers(callback: types.CallbackQuery, state: FSMContext):
 @ref_router.message(MyStates.waiting_for_input)
 async def process_input(message: types.Message, state: FSMContext, session: AsyncSession):
     promocode = message.text.strip()
-    # взяли промокод
     user_tg_id = message.from_user.id
-    id_user_from_db = await get_tg_id_by_promocode(session, promocode) # нашли tg_id пользователя через промокод
+    id_user_from_db = await get_tg_id_by_promocode(session, promocode)
     if user_tg_id == id_user_from_db:
-        # если tg_id совпадают, то ошибка
         await message.answer(("🚫 Вы не можете использовать собственный промокод."))
     else:
-        # проверяем, может у пользователя уже активирован промокод
         check_promo = await check_promocode_is_active(session, user_tg_id)
         if check_promo:
             await message.answer(("У вас уже активирован промокод со скидкой!"))

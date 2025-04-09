@@ -1,10 +1,8 @@
-from sqlalchemy import Integer, String, Boolean, DateTime, Text, BigInteger, func, UUID
-from sqlalchemy.dialects.mysql import BIGINT
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, BigInteger, func
 from sqlalchemy.orm import Mapped, mapped_column
 from database.base import Base
-from datetime import datetime, timezone
+from datetime import datetime
 from utils import fk
-from sqlalchemy.dialects.postgresql import UUID as pg_UUID
 
 
 class User(Base):
@@ -32,5 +30,5 @@ class Log(Base):
 
 class Payment(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, fk(User, "tg_id"), nullable=False)
-    payment_id: Mapped[int] = mapped_column(pg_UUID, unique=True, nullable=False)
+    payment_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     status: Mapped[str] = mapped_column(String, default="pending", nullable=False)

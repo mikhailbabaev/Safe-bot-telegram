@@ -29,5 +29,5 @@ def camel_case_to_snake(input_str: str) -> str:
 
 def fk(reference: type, column: str = "id") -> ForeignKey:
     """Генерирует ForeignKey, используя `camel_case_to_snake` для имени таблицы и поля."""
-    table_name = camel_case_to_snake(reference.__name__)  # Преобразуем имя класса в snake_case
-    return ForeignKey(f"{table_name}s.{column}")  # Добавляем 's' для таблицы и указываем столбец
+    table_name = camel_case_to_snake(reference.__name__)
+    return ForeignKey(f"{table_name}s.{column}")

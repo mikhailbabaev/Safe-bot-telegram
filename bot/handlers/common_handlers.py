@@ -1,16 +1,11 @@
-import asyncio
-import random
-
-import time
-import os
 import logging
 from datetime import datetime
+
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 from keyboards.common_keyboards import start_menu
 from templates import WELCOME_MESSAGE, PAYMENT_TEXT

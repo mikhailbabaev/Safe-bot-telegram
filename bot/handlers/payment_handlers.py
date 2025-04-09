@@ -1,15 +1,10 @@
 from aiogram import Router, F
 
-from aiohttp import web
-from aiogram.types import Message, CallbackQuery,  FSInputFile
-from templates import FUNC_IN_DEV, PAYMENT_TEXT
+from aiogram.types import CallbackQuery,  FSInputFile
+from templates import PAYMENT_TEXT
 from keyboards.payment_kb import create_payments_keyboard
-from database.requests import set_payment_time, get_user_by_tg_id, set_user_action, save_payment, update_payment_status, get_unpaid_payments
+from database.requests import set_user_action, save_payment
 from sqlalchemy.ext.asyncio import AsyncSession
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.context import FSMContext
-from yookassa import Payment, Configuration
-import asyncio
 
 import uuid
 import os
@@ -18,9 +13,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Устанавливаем ключи для ЮKassa
+
 Configuration.account_id = os.getenv("YOOKASSA_SHOP_ID")
 Configuration.secret_key = os.getenv("YOOKASSA_SECRET_KEY")
+
 payment_id = uuid.uuid4()
 
 async def create_payment(amount: float, tg_id: int):
@@ -31,7 +27,7 @@ async def create_payment(amount: float, tg_id: int):
             "currency": "RUB"
         },
         "confirmation": {
-            "type": "redirect",  # Открытие ссылки в браузере
+            "type": "redirect",
             "return_url":"https://t.me/test_antiugon_telegram_bot"
         },
         "capture": True,

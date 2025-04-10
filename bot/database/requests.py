@@ -126,14 +126,13 @@ async def set_payment_time(session: AsyncSession, tg_id: int) -> None:
     logger.info(f"set_payment_time: tg_id={tg_id}, установлено время оплаты")
 
 
-async def get_user_achievement_text(session: AsyncSession, tg_id: int) -> str:
-    """Создает клавиатуру с достижением пользователя."""
+async def get_user_achievement_number(session: AsyncSession, tg_id: int) -> int:
+    """Получаем номер достижения пользователя по tg_id."""
     stmt = select(User.achievement).where(User.tg_id == tg_id)
     result = await session.execute(stmt)
     achievement = result.scalar()
-    achievement_text = ACHIEVEMENT_LIST.get(achievement, "")
-    logger.info(f"get_user_achievement_text: tg_id={tg_id}, достижение={achievement_text}")
-    return achievement_text
+    logger.info(f"get_user_achievement_number: tg_id={tg_id}, номер достижения={achievement}")
+    return achievement
 
 
 async def set_user_action(session: AsyncSession, tg_id: int, action: str) -> None:

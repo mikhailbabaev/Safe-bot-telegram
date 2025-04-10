@@ -30,13 +30,14 @@ async def main():
 
     dp.include_routers(router, faq_router, check_router, ref_router, achivements_router, pay_router)
 
-    asyncio.create_task(poll_unpaid_payments(db_helper))
 
-    # запускаем сервер для приема вебхуков от юкассы
+
     runner = web.AppRunner(webhook_app)
     await runner.setup()
     site = web.TCPSite(runner, host="0.0.0.0", port=8080)
     await site.start()
+
+    asyncio.create_task(poll_unpaid_payments(db_helper))
 
     await dp.start_polling(bot)
 

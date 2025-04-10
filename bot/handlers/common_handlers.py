@@ -3,20 +3,20 @@ from datetime import datetime
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.common_keyboards import start_menu
-from templates import WELCOME_MESSAGE, PAYMENT_TEXT
-from database.requests import get_user_by_tg_id, create_user, get_user_achievement_text, set_user_action
+from templates import WELCOME_MESSAGE, ACHIEVEMENT_LIST
+from database.requests import get_user_by_tg_id, create_user, get_user_achievement_number, set_user_action
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, session: AsyncSession, state: FSMContext):
+async def cmd_start(message: Message, session: AsyncSession):
     tg_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name
@@ -25,13 +25,15 @@ async def cmd_start(message: Message, session: AsyncSession, state: FSMContext):
     user_auth = await get_user_by_tg_id(session, tg_id)
 
     if user_auth:
-        achievement_text = await get_user_achievement_text(session, tg_id)
-        start_menu.inline_keyboard[3][0].text = achievement_text
+        achievement_number = await get_user_achievement_number(session, tg_id)
+        achievement_text = ACHIEVEMENT_LIST.get(achievement_number)
+        start_menu.inline_keyboard[3][0].text = f"{achievement_text}"
         await message.answer(WELCOME_MESSAGE, reply_markup=start_menu)
     else:
         await create_user(session, tg_id, first_name, last_name, username, is_bot)
-        achievement_text = await get_user_achievement_text(session, tg_id)
-        start_menu.inline_keyboard[3][0].text = achievement_text
+        achievement_number = await get_user_achievement_number(session, tg_id)
+        achievement_text = ACHIEVEMENT_LIST.get(achievement_number)
+        start_menu.inline_keyboard[3][0].text = f"{achievement_text}"
         await message.answer(WELCOME_MESSAGE, reply_markup=start_menu)
     await set_user_action(session, tg_id, 'start')
     logger.warning(
@@ -45,6 +47,9 @@ async def return_to_main_menu(callback: CallbackQuery,  state: FSMContext, sessi
     await set_user_action(session, tg_id, 'go_to_start_menu')
 
     await state.clear()
+    achievement_number = await get_user_achievement_number(session, tg_id)
+    achievement_text = ACHIEVEMENT_LIST.get(achievement_number)
+    start_menu.inline_keyboard[3][0].text = f"{achievement_text}"
     await callback.message.answer(
         WELCOME_MESSAGE,
         reply_markup=start_menu

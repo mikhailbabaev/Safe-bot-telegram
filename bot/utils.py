@@ -31,3 +31,20 @@ def fk(reference: type, column: str = "id") -> ForeignKey:
     """Генерирует ForeignKey, используя `camel_case_to_snake` для имени таблицы и поля."""
     table_name = camel_case_to_snake(reference.__name__)
     return ForeignKey(f"{table_name}s.{column}")
+
+
+def get_user_achievement_text(achievement_number: int, achievement_list: list) -> str:
+    """Генерирует текст с достижениями по номеру."""
+    received = []
+    not_received = []
+
+    for i in range(1, len(achievement_list) + 1):
+        achievement_text = achievement_list[i].split(" (")[0]  # Оставляем только текст до (число/10)
+        if i <= achievement_number:
+            received.append(achievement_text)
+        else:
+            not_received.append(achievement_text)
+
+    return f"Ваши достижения {achievement_number} из 10\n\n" \
+           f"Получены:\n" + "\n".join(received) + "\n\n" \
+           f"Не получены:\n" + "\n".join(not_received)

@@ -18,7 +18,7 @@ class User(Base):
     promocode_given: Mapped[bool] = mapped_column(Boolean, default=False)
     promocode_is_active: Mapped[str] = mapped_column(String(50), nullable=True)
     is_bot: Mapped[bool] = mapped_column(Boolean, default=True)
-    payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    payment_end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     last_check_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     achievement: Mapped[int] = mapped_column(Integer, default=1, nullable=True)
 
@@ -32,3 +32,11 @@ class Payment(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, fk(User, "tg_id"), nullable=False)
     payment_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     status: Mapped[str] = mapped_column(String, default="pending", nullable=False)
+    payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SecurityStepProgress(Base):
+    user_id: Mapped[int] = mapped_column(BigInteger, fk(User, "tg_id"), nullable=False)
+    step_id: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

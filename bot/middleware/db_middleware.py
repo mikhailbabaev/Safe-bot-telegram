@@ -15,8 +15,11 @@ class DatabaseMiddleware(BaseMiddleware):
     async def __call__(self, handler: Callable[[Update, Dict[str, Any]], Any],
                        event: Update, data: Dict[str, Any]) -> Any:
         async with self.db_helper.get_session() as session:
-            data["session"] = session  # Передаем сессию в хэндлер
-            return await handler(event, data)
+            data["session"] = session
+            try:
+                return await handler(event, data)
+            finally:
+                await session.close()
 
 
 def create_db_middleware(db_helper: DatabaseHelper):
@@ -25,7 +28,7 @@ def create_db_middleware(db_helper: DatabaseHelper):
     @web.middleware
     async def db_middleware(request, handler):
         async with db_helper.get_session() as session:
-            request["db_session"] = session  # Добавляем сессию в request
+            request["db_session"] = session
             response = await handler(request)
         return response
 

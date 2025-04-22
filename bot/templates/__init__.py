@@ -16,5 +16,7 @@ from .templates import (
     PROMOCODE_GIVEN,
     LINK,
     ACHIEVEMENT_LIST,
-    ACTION_TEMPLATES
+    ACTION_TEMPLATES,
+    PAY_CHECK_TEMPLATE,
+    STEP_TEXTS,
 )

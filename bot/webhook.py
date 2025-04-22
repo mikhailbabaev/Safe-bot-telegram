@@ -2,7 +2,7 @@ import logging
 import os
 from aiohttp import web
 
-from database.requests import update_payment_status, set_payment_time
+from database.requests import update_payment_status, set_user_payment_date
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ async def yookassa_webhook(request):
 
             session = request['db_session']
             await update_payment_status(session, payment_id, status)
-            await set_payment_time(session, tg_id)
-
+            await set_user_payment_date(session, tg_id)
+            print("Вебхук")
             logger.info(f"Статус платежа обновлен для payment_id={payment_id}")
 
         else:

@@ -11,6 +11,17 @@ from database.db_helper import init_db, create_db_helper
 from webhook import webhook_app
 from polling import poll_unpaid_payments
 
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log', mode='a', encoding='utf-8'),
+    ]
+)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
 
 async def main():
     load_dotenv()
@@ -31,7 +42,6 @@ async def main():
     dp.include_routers(router, faq_router, check_router, ref_router, achivements_router, pay_router)
 
 
-
     runner = web.AppRunner(webhook_app)
     await runner.setup()
     site = web.TCPSite(runner, host="0.0.0.0", port=8080)
@@ -43,13 +53,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('app.log', mode='a', encoding='utf-8'),
-        ]
-    )
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

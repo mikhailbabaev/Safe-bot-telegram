@@ -1,8 +1,12 @@
+import logging
 import random
 import string
 import hashlib
 
 from sqlalchemy import ForeignKey
+
+
+logger = logging.getLogger(__name__)
 
 
 def generate_promocode(tg_id: int) -> str:

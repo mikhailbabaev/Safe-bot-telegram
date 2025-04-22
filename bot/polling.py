@@ -4,7 +4,7 @@ import logging
 
 from yookassa import Payment, Configuration
 
-from database.requests import get_unpaid_payments, update_payment_status, set_payment_time
+from database.requests import get_unpaid_payments, update_payment_status, set_user_payment_date
 
 logger = logging.getLogger(__name__)
 
@@ -41,5 +41,7 @@ async def poll_unpaid_payments(db_helper):
 
                 logging.info(f"Обновляем статус в БД: {payment_id} -> {status}")
                 await update_payment_status(session, payment_id, status)
-                await set_payment_time(session, tg_id)
-        await asyncio.sleep(3600)
+                if status == "succeeded":
+                    await set_user_payment_date(session, tg_id)
+                    print("Поллинг")
+        await asyncio.sleep(180)

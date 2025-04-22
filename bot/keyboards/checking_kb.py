@@ -1,10 +1,25 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from templates.buttons import PAYMENT, TO_MAIN_MENU, ACHIVEMENTS
+from templates.buttons import PAYMENT, TO_MAIN_MENU, UKASSA_PAYMENT, PAY_CHECK
 
 
-checking_menu = InlineKeyboardMarkup(inline_keyboard=[
+free_checking_menu = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=PAYMENT, callback_data="payments")],
-    [InlineKeyboardButton(text=ACHIVEMENTS, callback_data='achivements')],
     [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
 ])
+
+
+
+pay_checking_menu = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=PAY_CHECK, callback_data="pay_check")],
+    [InlineKeyboardButton(text=UKASSA_PAYMENT, callback_data='url_ukassa')],
+    [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
+])
+
+
+def get_step_action_kb(current_step: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Сделал", callback_data=f"step_done:{current_step}")],
+        [InlineKeyboardButton(text="ℹ️ Подробнее", callback_data=f"step_info:{current_step}")],
+        [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
+    ])

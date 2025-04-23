@@ -50,7 +50,11 @@ async def create_payment(amount: float, tg_id: int):
     return payment.id, payment.confirmation.confirmation_url
 
 
-async def wait_for_payment(bot, session: AsyncSession, state: FSMContext, tg_id: int, payment_id: str, timeout: int = 10):
+async def wait_for_payment(bot, session: AsyncSession,
+                           state: FSMContext,
+                           tg_id: int,
+                           payment_id: str,
+                           timeout: int = 300):
 
     start_time = datetime.now(timezone.utc).timestamp()
 
@@ -113,7 +117,6 @@ async def connection_ukassa(callback: CallbackQuery,
     payment_id, payment_url = await create_payment(10.00, tg_id)
     await save_payment(session, tg_id, payment_id)
 
-
     await state.set_state(PaymentState.waiting_for_payment)
     await state.update_data(
         payment_id=payment_id,
@@ -125,8 +128,6 @@ async def connection_ukassa(callback: CallbackQuery,
         reply_markup=get_payment_url_kb(payment_url),
         parse_mode="HTML"
     )
-
     await callback.answer(show_alert=False)
-
 
     asyncio.create_task(wait_for_payment(callback.bot, session, state, tg_id, payment_id))

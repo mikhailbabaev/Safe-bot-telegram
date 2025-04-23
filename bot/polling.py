@@ -44,4 +44,4 @@ async def poll_unpaid_payments(db_helper):
                 if status == "succeeded":
                     await set_user_payment_date(session, tg_id)
                     print("Поллинг")
-        await asyncio.sleep(180)
+        await asyncio.sleep(30)

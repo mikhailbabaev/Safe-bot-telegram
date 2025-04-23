@@ -20,4 +20,8 @@ from .templates import (
     PAY_CHECK_TEMPLATE,
     STEP_TEXTS,
     END_PAY_CHECK,
+    FAKECHECKUP_TEXT,
+    FAKECHECKUP_END,
+    FINALCHKUP_END,
+    FINALCHKUP_TEXT,
 )

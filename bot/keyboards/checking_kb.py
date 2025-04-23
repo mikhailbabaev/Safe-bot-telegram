@@ -21,5 +21,22 @@ def get_step_action_kb(current_step: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Сделал", callback_data=f"step_done:{current_step}")],
         [InlineKeyboardButton(text="ℹ️ Подробнее", callback_data=f"step_info:{current_step}")],
+        [InlineKeyboardButton(text="ℹ️ Не хочу! Можно пропустить?", callback_data=f"miss_step:{current_step}")],
+        [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
+    ])
+
+
+def get_info_action_kb(current_step: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Сделал", callback_data=f"step_done:{current_step}")],
+        [InlineKeyboardButton(text="ℹ️ Не хочу! Можно пропустить?", callback_data=f"miss_step:{current_step}")],
+        [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
+    ])
+
+
+def get_miss_action_kb(current_step: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Сделал", callback_data=f"step_done:{current_step}")],
+        [InlineKeyboardButton(text="ℹ️ Подробнее", callback_data=f"step_info:{current_step}")],
         [InlineKeyboardButton(text=TO_MAIN_MENU, callback_data='go_to_start_menu')]
     ])

@@ -5,9 +5,13 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from keyboards.checking_kb import free_checking_menu, pay_checking_menu, get_step_action_kb
 from keyboards.common_keyboards import to_start_menu
-from templates import CHECKUP_TEXT, CHECKUP_END, PAY_CHECK_TEMPLATE, STEP_TEXTS
+from keyboards.checking_kb import (free_checking_menu,
+                                   pay_checking_menu,
+                                   get_step_action_kb,
+                                   get_info_action_kb,
+                                   get_miss_action_kb)
+from templates import CHECKUP_TEXT, CHECKUP_END, PAY_CHECK_TEMPLATE, STEP_TEXTS, END_PAY_CHECK
 from database.requests import (set_last_check_time,
                                set_user_action,
                                get_user_payment_date,
@@ -43,7 +47,7 @@ def progress_bar(percent):
 async def show_step(message: Message, step_id: str):
     if step_id not in STEP_TEXTS:
         await message.answer(
-            text="🥳 Вы прошли все шаги! Ваш аккаунт максимально защищён.",
+            text=END_PAY_CHECK,
         )
         return
 
@@ -70,13 +74,11 @@ async def show_pay_check_menu(bot: Bot, chat_id: int, session: AsyncSession):
     )
 
 
-async def run_security_check(bot: Bot, chat_id: int, session: AsyncSession, is_paid: bool = False):
-    """Универсальная проверка безопасности (бесплатная или премиум)"""
-    await set_user_action(session, chat_id, 'free_check' if not is_paid else 'pay_check_action')
-
-    message = await bot.send_message(chat_id, "Начинаем проверку безопасности...")
+async def checking_process(bot: Bot, tg_id: int) -> None:
+    """Имитация шагов проверки безопасности."""
+    message = await bot.send_message(tg_id, "Начинаем проверку безопасности...")
     total_steps = len(CHECKUP_TEXT)
-    progress_message = await bot.send_message(chat_id, progress_bar(0))
+    progress_message = await bot.send_message(tg_id, progress_bar(0))
 
     for i in range(1, total_steps + 1):
         progress = (i / total_steps) * 100
@@ -85,10 +87,17 @@ async def run_security_check(bot: Bot, chat_id: int, session: AsyncSession, is_p
         await message.edit_text(CHECKUP_TEXT[i])
 
     await progress_message.delete()
-    await set_last_check_time(session, chat_id)
 
+
+async def run_security_check(bot: Bot, tg_id: int, session: AsyncSession, is_paid: bool = False):
+    """Фиктивная проверка безопасности (имитация деятельности)."""
+    await set_user_action(session, tg_id, 'free_check' if not is_paid else 'pay_check_action')
+
+    await checking_process(bot, tg_id)
+    await set_last_check_time(session, tg_id)
+    await increase_user_achievement_number(session, tg_id)
     keyboard = pay_checking_menu if is_paid else free_checking_menu
-    await bot.send_message(chat_id, CHECKUP_END, reply_markup=keyboard)
+    await bot.send_message(tg_id, CHECKUP_END, reply_markup=keyboard)
 
 
 @check_router.callback_query(F.data == "check_security")
@@ -158,5 +167,17 @@ async def handle_more_info(callback: CallbackQuery):
     step_id = callback.data.split(":")[1]
 
     await callback.message.answer(f"ℹ️ Подробная информация по шагу: {step_id}\n\n"
-                                  f"(Тут будет описание или советы по выполнению)")
+                                  f"(Тут будет описание или советы по выполнению)",
+                                  reply_markup=get_info_action_kb(step_id))
+    await callback.answer()
+
+
+@check_router.callback_query(F.data.startswith("miss_step:"))
+async def handle_more_info(callback: CallbackQuery):
+    step_id = callback.data.split(":")[1]
+
+    await callback.message.answer(f"ℹ️ Нельзя пропустить, ваша безопасность стоит одной минутки: \n\n"
+                                  f"К тому же думать полезно\n\n"
+                                  f"Выполните шаг {step_id} позязя)",
+                                  reply_markup=get_miss_action_kb(step_id))
     await callback.answer()

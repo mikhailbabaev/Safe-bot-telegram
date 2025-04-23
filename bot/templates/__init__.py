@@ -19,4 +19,5 @@ from .templates import (
     ACTION_TEMPLATES,
     PAY_CHECK_TEMPLATE,
     STEP_TEXTS,
+    END_PAY_CHECK,
 )

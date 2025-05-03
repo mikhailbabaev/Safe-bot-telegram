@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from keyboards.achivements_kb import achive_kb
-from templates import ACHIVEMENTS, ACHIEVEMENT_LIST
+from templates import ACHIEVEMENT_LIST
 from database.requests import set_user_action, get_user_achievement_number
 from utils import get_user_achievement_text
 

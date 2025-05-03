@@ -5,15 +5,15 @@ import logging
 from datetime import datetime, timezone
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery,  FSInputFile
+from aiogram.types import CallbackQuery,  FSInputFile, Message
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from yookassa import Payment, Configuration
 from dotenv import load_dotenv
 
 from templates import PAYMENT_TEXT
-from keyboards.payment_kb import payments, get_payment_url_kb
-from database.requests import set_user_action, save_payment, check_payment_status
+from keyboards.payment_kb import get_payment_url_kb, get_payment_menu_kb
+from database.requests import set_user_action, save_payment, check_payment_status, check_promocode_is_active
 from handlers.states import PaymentState
 from handlers.common_handlers import show_main_menu
 from handlers.checking_handlers import show_pay_check_menu
@@ -50,7 +50,8 @@ async def create_payment(amount: float, tg_id: int):
     return payment.id, payment.confirmation.confirmation_url
 
 
-async def wait_for_payment(bot, session: AsyncSession,
+async def wait_for_payment(message: Message,
+                           session: AsyncSession,
                            state: FSMContext,
                            tg_id: int,
                            payment_id: str,
@@ -65,9 +66,9 @@ async def wait_for_payment(bot, session: AsyncSession,
             return
         current_time = datetime.now(timezone.utc).timestamp()
         if current_time - start_time > timeout:
-            await bot.send_message(tg_id, "⏳ Время на оплату истекло. Возвращаем вас в главное меню.")
+            await message.answer("⏳ Время на оплату истекло. Возвращаем вас в главное меню.")
             await state.clear()
-            await show_main_menu(bot, tg_id, session)
+            await show_main_menu(message, tg_id, session)
             logger.info(f"[FSM] Время истекло для user_id={tg_id}. Ожидание оплаты отменено.")
             return
 
@@ -75,9 +76,9 @@ async def wait_for_payment(bot, session: AsyncSession,
         status = await check_payment_status(session, payment_id)
 
         if status == "succeeded":
-            await bot.send_message(tg_id, "✅ Оплата подтверждена! Добро пожаловать!")
+            await message.answer("✅ Оплата подтверждена! Добро пожаловать!")
             await state.clear()
-            await show_pay_check_menu(bot, tg_id, session)
+            await show_pay_check_menu(message, tg_id, session)
             return
         else:
             logger.info(f"[FSM] Ожидание подтверждения платежа для user_id={tg_id}...")
@@ -89,17 +90,12 @@ async def payment_to_ukassa(callback: CallbackQuery,
                             ):
     """Оплата сервиса через Юкассу"""
     tg_id = callback.from_user.id
+    price = 149 if await check_promocode_is_active(session, tg_id) else 199
     await set_user_action(session, tg_id, 'pay')
-
-
-    image_path = os.path.join(os.path.dirname(__file__), '../pay.jpg')
-    image_file = FSInputFile(image_path)
-
-
     await callback.message.answer_photo(
-        image_file,
-        caption=PAYMENT_TEXT,
-        reply_markup=payments,
+        "AgACAgIAAxkBAAIIDGgN6ZUaszi8Wx664xiU7eaC_0dQAALa5jEbWT5xSF8ycevT81CSAQADAgADeQADNgQ",
+        caption=PAYMENT_TEXT.format(price=price),
+        reply_markup=get_payment_menu_kb(price),
         parse_mode='HTML'
     )
 
@@ -112,9 +108,10 @@ async def connection_ukassa(callback: CallbackQuery,
                             state: FSMContext):
 
     tg_id = callback.from_user.id
+    price = 149 if await check_promocode_is_active(session, tg_id) else 199
     await set_user_action(session, tg_id, 'pay_to_ukassa')
 
-    payment_id, payment_url = await create_payment(10.00, tg_id)
+    payment_id, payment_url = await create_payment(price, tg_id)
     await save_payment(session, tg_id, payment_id)
 
     await state.set_state(PaymentState.waiting_for_payment)
@@ -125,9 +122,9 @@ async def connection_ukassa(callback: CallbackQuery,
     )
     await callback.message.answer(
         text="💳 Перейдите по ссылке для оплаты:",
-        reply_markup=get_payment_url_kb(payment_url),
+        reply_markup=get_payment_url_kb(payment_url, price),
         parse_mode="HTML"
     )
     await callback.answer(show_alert=False)
 
-    asyncio.create_task(wait_for_payment(callback.bot, session, state, tg_id, payment_id))
+    asyncio.create_task(wait_for_payment(callback.message, session, state, tg_id, payment_id))

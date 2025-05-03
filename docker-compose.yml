@@ -16,7 +16,7 @@ services:
       - .env
     command: >
       sh -c "while ! pg_isready -h db -p 5432; do echo 'Waiting for db...'; sleep 2; done;
-      python bot/bot.py"
+      python bot/main.py"
 
   db:
     image: postgres:13

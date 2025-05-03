@@ -1,10 +1,11 @@
+import asyncio
 import logging
 import random
 import string
 import hashlib
 
 from sqlalchemy import ForeignKey
-
+from aiogram import Dispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -52,3 +53,23 @@ def get_user_achievement_text(achievement_number: int, achievement_list: list) -
     return f"Ваши достижения {achievement_number} из 10\n\n" \
            f"Получены:\n" + "\n".join(received) + "\n\n" \
            f"Не получены:\n" + "\n".join(not_received)
+
+
+async def on_shutdown(dispatcher: Dispatcher, poll_task: asyncio.Task):
+    logging.info("🛑 Завершение работы бота...")
+
+    # Завершаем фоновую задачу
+    if not poll_task.done():
+        logging.info("❌ Завершаем фоновую задачу poll_unpaid_payments.")
+        poll_task.cancel()
+
+    try:
+        await poll_task
+    except asyncio.CancelledError:
+        logging.info("Задача poll_unpaid_payments завершена.")
+
+
+    # Закрываем соединение с БД
+    logging.info("Закрытие соединения с БД...")
+    await dispatcher.workflow_data["db_helper"].dispose()
+    logging.info("✅ Соединение с БД закрыто.")

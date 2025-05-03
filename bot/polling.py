@@ -37,11 +37,10 @@ async def poll_unpaid_payments(db_helper):
                 payment_id, tg_id = payment
 
                 logging.info(f"Проверка платежа {payment_id}")
-                status = await check_payment_status(payment_id)
+                status= await check_payment_status(payment_id)
 
                 logging.info(f"Обновляем статус в БД: {payment_id} -> {status}")
                 await update_payment_status(session, payment_id, status)
                 if status == "succeeded":
                     await set_user_payment_date(session, tg_id)
-                    print("Поллинг")
-        await asyncio.sleep(30)
+        await asyncio.sleep(25)

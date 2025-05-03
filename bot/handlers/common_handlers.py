@@ -15,48 +15,43 @@ from database.requests import (
     get_user_achievement_number,
     set_user_action,
     get_user_payment_date,
-    )
+    get_wallet_count)
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-def get_welcome_message(is_paid: bool, payment_date: datetime | None = None) -> str:
+def get_welcome_message(is_paid: bool, payment_date: datetime | None = None, wallet_count: float = 0) -> str:
     if is_paid and payment_date:
         return (
-            f"✅ Ваша подписка активна до: {payment_date.strftime('%d.%m.%Y %H:%M')}\n\n"
-            f"{WELCOME_MESSAGE}"
+            f"{WELCOME_MESSAGE}\n"
+            f"✅ Ваша подписка активна до: {payment_date.strftime('%d.%m.%Y %H:%M')}\n"
+            f"На вашем личном счету {wallet_count} рублей"
         )
     else:
         return (
-            "⚠️ У вас нет активной подписки или срок действия истёк.\n\n"
-            f"{WELCOME_MESSAGE}"
+            f"{WELCOME_MESSAGE}\n"
+            "⚠️ У вас нет активной подписки или срок действия истёк. "
+            f"На вашем личном счету {wallet_count} рублей"
+
         )
 
 
-async def show_main_menu(bot: Bot, chat_id: int, session: AsyncSession):
+async def show_main_menu(message: Message, chat_id: int, session: AsyncSession):
     now = datetime.now(timezone.utc)
-
+    wallet_count = await get_wallet_count(session, chat_id)
     payment_date = await get_user_payment_date(session, chat_id)
     achievement_number = await get_user_achievement_number(session, chat_id)
     is_paid = payment_date is not None and payment_date > now
 
     achievement_text = ACHIEVEMENT_LIST.get(achievement_number, "🏆 Достижения")
     keyboard = get_start_menu(achievement_text, is_paid)
-    welcome_text = get_welcome_message(is_paid, payment_date)
-
-    if is_paid:
-        await bot.send_message(
-            chat_id,
-            text=welcome_text,
-            reply_markup=keyboard
-        )
-    else:
-        await bot.send_message(
-            chat_id,
-            text=welcome_text,
-            reply_markup=keyboard
-        )
+    welcome_text = get_welcome_message(is_paid, payment_date, wallet_count)
+    await message.answer_photo(
+        photo='AgACAgIAAxkBAAIIyGgN_YNdefF_beYa1bWFDDlv-DoEAAI76DEbLQtwSGHr_xSMi80TAQADAgADeQADNgQ',
+        caption=welcome_text,
+        reply_markup=keyboard
+    )
 
 
 @router.message(CommandStart())
@@ -71,7 +66,7 @@ async def cmd_start(message: Message, session: AsyncSession):
     if not user_auth:
         await create_user(session, tg_id, first_name, last_name, username, is_bot)
 
-    await show_main_menu(message.bot, tg_id, session)
+    await show_main_menu(message, tg_id, session)
     await set_user_action(session, tg_id, 'start')
 
     logger.warning(
@@ -84,5 +79,26 @@ async def return_to_main_menu(callback: CallbackQuery, state: FSMContext, sessio
     tg_id = callback.from_user.id
     await set_user_action(session, tg_id, 'go_to_start_menu')
     await state.clear()
-    await show_main_menu(callback.bot, tg_id, session)
+    await show_main_menu(callback.message, tg_id, session)
     await callback.answer()
+
+
+# Отладочные обработчики для получения id файлов
+
+@router.message(F.photo)
+async def photo(message: Message):
+    file_id_photo = message.photo[-1].file_id
+    print(file_id_photo)
+    await message.answer(f"✅ Сохрани этот file_id: `{file_id_photo}`")
+
+
+# @router.message(F.document)
+# async def handle_video(message: Message):
+#     file_id = message.document.file_id
+#     print(file_id)
+#     await message.answer_photo(file_id)
+#     await message.answer(f"✅ Сохрани этот file_id: `{file_id}`")
+
+
+
+

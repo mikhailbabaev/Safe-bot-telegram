@@ -99,7 +99,7 @@ async def set_promocode_given(session: AsyncSession, tg_id: int) -> None:
 
 @log_db_session_usage
 async def set_promocode_usage(session: AsyncSession, tg_id: int, promocode: str) -> bool:
-    """Прибавить счетчик, что промокод использован."""
+    """Прибавить счетчик, при использовании промокода."""
     result = await session.execute(select(User).where(User.promocode == promocode))
     promocode_entry = result.scalar_one_or_none()
 
@@ -110,12 +110,23 @@ async def set_promocode_usage(session: AsyncSession, tg_id: int, promocode: str)
     stmt = (
         update(User)
         .where(User.tg_id == tg_id)
-        .values(promocode_usage_count=User.promocode_usage_count + 1)
+        .values(promocode_usage_count=User.promocode_usage_count + 1,
+                wallet_rub=User.wallet_rub + 50
+                )
     )
     await session.execute(stmt)
     await session.commit()
     logger.info(f"set_promocode_usage: tg_id={tg_id}, использован промокод {promocode}")
     return True
+
+
+@log_db_session_usage
+async def get_wallet_count(session: AsyncSession, tg_id: int) -> float:
+    """Получить остаток денег не счету пользователя."""
+    stmt = select(User.wallet_rub).where(User.tg_id == tg_id)
+    result = await session.execute(stmt)
+    wallet_count = result.scalars().first()
+    return wallet_count
 
 
 @log_db_session_usage
@@ -217,11 +228,10 @@ async def save_payment(session: AsyncSession, tg_id: int, payment_id: str) -> No
 @log_db_session_usage
 async def get_unpaid_payments(session: AsyncSession) -> list[tuple[str, int]]:
     """Получаем список незавершённых платежей."""
-    async with session.begin():
-        result = await session.execute(
-            select(Payment.payment_id, Payment.user_id).where(Payment.status == "pending")
-        )
-        return result.fetchall()
+    result = await session.execute(
+        select(Payment.payment_id, Payment.user_id).where(Payment.status == "pending")
+    )
+    return result.fetchall()
 
 
 @log_db_session_usage
@@ -343,4 +353,56 @@ async def delete_user_steps(session: AsyncSession, tg_id: int):
     await session.execute(
         delete(SecurityStepProgress).where(SecurityStepProgress.user_id == tg_id)
     )
+    await session.commit()
+
+
+@log_db_session_usage
+async def get_user_percent(session: AsyncSession, tg_id: int) -> int:
+    """Получить фиктивный процент, установленный за пользователем."""
+    stmt = select(User.check_percent).where(User.tg_id == tg_id)
+    result = await session.execute(stmt)
+    percent = result.scalar_one_or_none()
+    return percent
+
+
+@log_db_session_usage
+async def set_user_percent(session: AsyncSession, tg_id: int, percent: Optional[int]) -> None:
+    """Установить фиктивный процент, установленный за пользователем."""
+    stmt = (update(User).
+            where(User.tg_id == tg_id).
+            values(check_percent=percent)
+            )
+    await session.execute(stmt)
+    await session.commit()
+
+
+
+@log_db_session_usage
+async def increase_user_percent_by_5(session: AsyncSession, tg_id: int) -> None:
+    """Добавить 5% к текущему проценту, установленному за пользователем."""
+    stmt = (update(User).
+            where(User.tg_id == tg_id).
+            values(check_percent=User.check_percent + 5)
+            )
+    await session.execute(stmt)
+    await session.commit()
+
+
+@log_db_session_usage
+async def get_user_check_text_number(session: AsyncSession, tg_id: int) -> int:
+    """Получить номер текста, установленный за пользователем."""
+    stmt = select(User.check_text_number).where(User.tg_id == tg_id)
+    result = await session.execute(stmt)
+    number = result.scalar_one_or_none()
+    return number
+
+
+@log_db_session_usage
+async def set_user_check_number(session: AsyncSession, tg_id: int, number: int) -> None:
+    """Установить фиктивный процент, установленный за пользователем."""
+    stmt = (update(User).
+            where(User.tg_id == tg_id).
+            values(check_text_number=number)
+            )
+    await session.execute(stmt)
     await session.commit()

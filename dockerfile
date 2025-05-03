@@ -27,4 +27,4 @@ RUN python -m venv venv
 ENV PATH="/app/venv/bin:$PATH"
 
 # Команда для запуска бота
-CMD ["python", "bot/bot.py"]
+CMD ["python", "bot/main.py"]

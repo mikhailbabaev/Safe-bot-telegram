@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from aiogram import Router, F, Bot
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,8 @@ from database.requests import (
     get_user_achievement_number,
     set_user_action,
     get_user_payment_date,
-    get_wallet_count)
+    get_wallet_count,
+    reset_user)
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -43,9 +44,8 @@ async def show_main_menu(message: Message, chat_id: int, session: AsyncSession):
     payment_date = await get_user_payment_date(session, chat_id)
     achievement_number = await get_user_achievement_number(session, chat_id)
     is_paid = payment_date is not None and payment_date > now
-
     achievement_text = ACHIEVEMENT_LIST.get(achievement_number, "🏆 Достижения")
-    keyboard = get_start_menu(achievement_text, is_paid)
+    keyboard = get_start_menu(achievement_text, is_paid, wallet_count)
     welcome_text = get_welcome_message(is_paid, payment_date, wallet_count)
     await message.answer_photo(
         photo='AgACAgIAAxkBAAIIyGgN_YNdefF_beYa1bWFDDlv-DoEAAI76DEbLQtwSGHr_xSMi80TAQADAgADeQADNgQ',
@@ -85,11 +85,20 @@ async def return_to_main_menu(callback: CallbackQuery, state: FSMContext, sessio
 
 # Отладочные обработчики для получения id файлов
 
-@router.message(F.photo)
-async def photo(message: Message):
-    file_id_photo = message.photo[-1].file_id
-    print(file_id_photo)
-    await message.answer(f"✅ Сохрани этот file_id: `{file_id_photo}`")
+@router.message(F.text == "/reset")
+async def reset_command_handler(message: Message, session: AsyncSession):
+    tg_id = message.from_user.id
+    await reset_user(session, tg_id)
+    await message.answer("Сброс выполнен")
+
+
+# Обработчики ниже используются для подгрузки медиа файлов в чат и получения их id в этом чате
+
+# @router.message(F.photo)
+# async def photo(message: Message):
+#     file_id_photo = message.photo[-1].file_id
+#     print(file_id_photo)
+#     await message.answer(f"✅ Сохрани этот file_id: `{file_id_photo}`")
 
 
 # @router.message(F.document)

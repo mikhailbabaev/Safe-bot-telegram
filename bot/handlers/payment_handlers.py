@@ -11,9 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yookassa import Payment, Configuration
 from dotenv import load_dotenv
 
-from templates import PAYMENT_TEXT
+from templates import PAYMENT_TEXT, GET_LINK_FOR_PAYMENT, PAYMENT_SUCCESS
 from keyboards.payment_kb import get_payment_url_kb, get_payment_menu_kb
-from database.requests import set_user_action, save_payment, check_payment_status, check_promocode_is_active
+from database.requests import (set_user_action,
+                               save_payment, check_payment_status,
+                               check_promocode_is_active, get_wallet_count)
 from handlers.states import PaymentState
 from handlers.common_handlers import show_main_menu
 from handlers.checking_handlers import show_pay_check_menu
@@ -76,7 +78,7 @@ async def wait_for_payment(message: Message,
         status = await check_payment_status(session, payment_id)
 
         if status == "succeeded":
-            await message.answer("✅ Оплата подтверждена! Добро пожаловать!")
+            await message.answer(PAYMENT_SUCCESS)
             await state.clear()
             await show_pay_check_menu(message, tg_id, session)
             return
@@ -92,10 +94,11 @@ async def payment_to_ukassa(callback: CallbackQuery,
     tg_id = callback.from_user.id
     price = 149 if await check_promocode_is_active(session, tg_id) else 199
     await set_user_action(session, tg_id, 'pay')
+    wallet_count = await get_wallet_count(session, tg_id)
     await callback.message.answer_photo(
         "AgACAgIAAxkBAAIIDGgN6ZUaszi8Wx664xiU7eaC_0dQAALa5jEbWT5xSF8ycevT81CSAQADAgADeQADNgQ",
         caption=PAYMENT_TEXT.format(price=price),
-        reply_markup=get_payment_menu_kb(price),
+        reply_markup=get_payment_menu_kb(price, wallet_count),
         parse_mode='HTML'
     )
 
@@ -121,7 +124,7 @@ async def connection_ukassa(callback: CallbackQuery,
         start_time=datetime.now(timezone.utc).timestamp()
     )
     await callback.message.answer(
-        text="💳 Перейдите по ссылке для оплаты:",
+        text=GET_LINK_FOR_PAYMENT,
         reply_markup=get_payment_url_kb(payment_url, price),
         parse_mode="HTML"
     )

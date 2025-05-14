@@ -3,11 +3,19 @@ Safe_bot_tg/
 ├── .venv                        # Виртуальное окружение
 │
 ├── bot/                          # Основная логика бота
-│   ├── __init__.py
-│   ├── bot.py                    # Файл запуска. Создание и настройка бота / логгер
+│   ├── main.py                    # Файл запуска. Создание и настройка бота / логгер
+│   ├── polling.py
+│   ├── utils.py
+│   ├── webhook.py
 │   ├── handlers/                 # Обработчики команд и сообщений
 │   │   ├── __init__.py
-│   │   └── handlers.py           # Все команды
+│   │   ├── achivements_handlers.py
+│   │   ├── checking_handlers.py
+│   │   ├── common_handlers.py
+│   │   ├── faq_handlers.py
+│   │   ├── payment_handlers.py
+│   │   ├── referal_handlers.py
+│   │   └── states.py         # FSM состояния
 │   ├── database/                 # Логика работы с базой данных
 │   │   ├── __init__.py
 │   │   ├── db_helper.py          # Работа с подключением к базе данных
@@ -17,14 +25,25 @@ Safe_bot_tg/
 │
 │   ├── keyboards/                    # Клавиатуры
 │   │   ├──__init__.py
-│   │   └──inline_keyboards/         # Инлайн клавиатуры
-
+│   │   ├── checking_keyboards.py
+│   │   ├── common_keyboards.py
+│   │   ├── faq_kb.py
+│   │   ├── payment_kb.py
+│   │   ├── promocode_kb.py
+│   │   ├── referal_kb.py
+│   │   └── achivements_keyboards
 │
 │   ├── templates/                    # Шаблоны текста
 │   │   ├──__init__.py
+│   │   ├── buttons.py               # Шаблоны кнопок для клавиатуры
 │   │   └──templates.py              # Шаблоны для сообщений (реклама и т. д.)
 │
-│   ├── .env                          # Файл с переменными окружения
+│   ├── media/                       # Медиа файлы - картинки, гифки...
+│
+│   ├── middleware
+│   │   └── db_middleware.py
+│   ├── .env
+│   ├── .env-template
 │   ├── __init__.py
 │   ├── app.log
 ├── requirements.txt              # Список зависимостей

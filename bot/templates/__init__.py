@@ -25,4 +25,7 @@ from .templates import (
     FAKECHECKUP_END,
     FINALCHKUP_END,
     FINALCHKUP_TEXT,
+    GET_LINK_FOR_PAYMENT,
+    PAYMENT_SUCCESS,
+    TRY_MISS_STEP
 )

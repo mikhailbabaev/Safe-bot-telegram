@@ -15,7 +15,7 @@ from database.requests import (
     set_promocode_is_active,
     check_promocode_is_active,
     set_user_action,
-    get_wallet_count)
+    get_wallet_count,)
 
 
 ref_router = Router()
@@ -28,9 +28,10 @@ async def cashback_menu(callback: types.CallbackQuery, session: AsyncSession):
     await set_user_action(session, tg_id, "promocodes")
     promocode = await get_promocode_by_tg_id(session, tg_id)
     message = REFERAL.format(promocode=promocode)
+    wallet = await get_wallet_count(session, tg_id)
     await callback.message.answer(
         message,
-        reply_markup=referal_kb,
+        reply_markup=referal_kb(wallet),
         parse_mode="HTML"
     )
 
@@ -60,9 +61,10 @@ async def process_input(message: types.Message, state: FSMContext, session: Asyn
 
                 tg_id = user_tg_id
                 await set_user_action(session, tg_id, "promo_code_used")
-
+                wallet_count = get_wallet_count(session, tg_id)
+                promo_kb_success_kb = promo_kb_success(149, wallet=wallet_count)
                 await message.answer(f"Промокод {promocode} успешно активирован!",
-                                     reply_markup=promo_kb_success)
+                                     reply_markup=promo_kb_success_kb)
             else:
                 await message.answer("Такого промокода выдано не было. Проверьте корректность!",
                                      reply_markup=promo_kb_wrong)
@@ -83,6 +85,7 @@ async def withdraw_money(callback: types.CallbackQuery, session: AsyncSession, b
         await callback.message.answer(
             f"У вас нет средств для вывода. "
             f" Попросите знакомых приобрести нашу подписку по вашему промокоду и получите 50 рублей.",
+            reply_markup=referal_getout_kb,
             parse_mode="HTML"
         )
         return

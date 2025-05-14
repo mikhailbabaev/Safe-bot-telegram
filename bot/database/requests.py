@@ -13,9 +13,6 @@ from templates import ACTION_TEMPLATES
 logger = logging.getLogger(__name__)
 
 
-import functools
-from sqlalchemy.ext.asyncio import AsyncSession
-
 def log_db_session_usage(fn):
     @functools.wraps(fn)
     async def wrapper(*args, **kwargs):
@@ -121,7 +118,7 @@ async def set_promocode_usage(session: AsyncSession, tg_id: int, promocode: str)
 
 
 @log_db_session_usage
-async def get_wallet_count(session: AsyncSession, tg_id: int) -> float:
+async def get_wallet_count(session: AsyncSession, tg_id: int) -> int:
     """Получить остаток денег не счету пользователя."""
     stmt = select(User.wallet_rub).where(User.tg_id == tg_id)
     result = await session.execute(stmt)
@@ -303,14 +300,38 @@ async def get_user_payment_date(session: AsyncSession, tg_id: int) -> Optional[d
 
 @log_db_session_usage
 async def get_step_progress(session: AsyncSession, tg_id: int, step_id: str) -> Optional[str]:
-    """Получаем статус прохождения актуального шага."""
-    stmt = select(SecurityStepProgress.status).where(
-        SecurityStepProgress.user_id == tg_id,
-        SecurityStepProgress.step_id == step_id
+    """Получаем статус прохождения актуального шага (последний по времени)."""
+    result = await session.execute(
+        select(SecurityStepProgress).where(SecurityStepProgress.user_id == tg_id)
     )
-    result = await session.execute(stmt)
-    status = result.scalar_one_or_none()
-    return status
+    steps = result.scalars().all()
+    if not steps:
+        return None
+
+    def step_sort_key(step):
+        num = int(step.step_id.removeprefix("step_"))
+        return num, step.timestamp
+
+    latest_step = max(steps, key=step_sort_key)
+    return latest_step.status
+
+
+@log_db_session_usage
+async def get_current_step(session: AsyncSession, tg_id: int) -> Optional[str]:
+    """Получить актуальный шаг по максимальному номеру и времени."""
+    result = await session.execute(
+        select(SecurityStepProgress).where(SecurityStepProgress.user_id == tg_id)
+    )
+    steps = result.scalars().all()
+    if not steps:
+        return None
+
+    def step_sort_key(step):
+        num = int(step.step_id.removeprefix("step_"))
+        return num, step.timestamp
+
+    latest_step = max(steps, key=step_sort_key)
+    return latest_step.step_id
 
 
 @log_db_session_usage
@@ -338,21 +359,23 @@ async def update_step_progress(session: AsyncSession, tg_id: int, step_id: str, 
 
 
 @log_db_session_usage
-async def get_current_step(session: AsyncSession, tg_id: int):
-    """Получить актуальный шаг проверки."""
-    progress = await session.execute(
-        select(SecurityStepProgress).filter_by(user_id=tg_id).order_by(SecurityStepProgress.timestamp.desc())
-    )
-    step = progress.scalar()
-    return step.step_id if step else None
-
-
-@log_db_session_usage
 async def delete_user_steps(session: AsyncSession, tg_id: int):
     """Очищаем историю проверки пользователя."""
     await session.execute(
         delete(SecurityStepProgress).where(SecurityStepProgress.user_id == tg_id)
     )
+    await session.commit()
+
+
+@log_db_session_usage
+async def set_user_percent_and_number(session: AsyncSession, tg_id: int, percent: int, number: int) -> None:
+    """Установить и процент, и номер текста за пользователя в одной транзакции."""
+    stmt = (
+        update(User)
+        .where(User.tg_id == tg_id)
+        .values(check_percent=percent, check_text_number=number)
+    )
+    await session.execute(stmt)
     await session.commit()
 
 
@@ -374,7 +397,6 @@ async def set_user_percent(session: AsyncSession, tg_id: int, percent: Optional[
             )
     await session.execute(stmt)
     await session.commit()
-
 
 
 @log_db_session_usage
@@ -403,6 +425,23 @@ async def set_user_check_number(session: AsyncSession, tg_id: int, number: int) 
     stmt = (update(User).
             where(User.tg_id == tg_id).
             values(check_text_number=number)
+            )
+    await session.execute(stmt)
+    await session.commit()
+
+
+@log_db_session_usage
+async def reset_user(session: AsyncSession, tg_id: int) -> None:
+    """Сбросить настройки пользователя к заводским."""
+    stmt = (update(User).
+            where(User.tg_id == tg_id).
+            values(payment_end_date=None,
+                   wallet_rub=0,
+                   achievement=1,  # Исправил здесь на 'achievement'
+                   promocode_usage_count=0,
+                   payment_status=False,
+                   check_percent=None,
+                   promocode_given=False)
             )
     await session.execute(stmt)
     await session.commit()

@@ -19,7 +19,7 @@ class User(Base):
     achievement: Mapped[int] = mapped_column(Integer, default=1, nullable=True)
     payment_status: Mapped[bool] = mapped_column(Boolean, default=False)
     payment_end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    wallet_rub: Mapped[float] = mapped_column(Float, default=0.0)
+    wallet_rub: Mapped[int] = mapped_column(Integer, default=0)
     promocode: Mapped[str] = mapped_column(Text, unique=True, nullable=True)
     promocode_usage_count: Mapped[int] = mapped_column(Integer, default=0)
     promocode_given: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -1,8 +1,8 @@
 import asyncio
 import random
 
-from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
@@ -11,7 +11,6 @@ from keyboards.common_keyboards import to_start_menu
 from keyboards.checking_kb import (free_checking_menu,
                                    pay_checking_menu,
                                    get_step_action_kb,
-                                   get_info_action_kb,
                                    get_miss_action_kb,
                                    first_pay_check_kb)
 from templates import (CHECKUP_TEXT,
@@ -20,14 +19,12 @@ from templates import (CHECKUP_TEXT,
                        END_PAY_CHECK,
                        FINALCHKUP_TEXT,
                        FINALCHKUP_END,
-                       FAKECHECKUP_END,
                        FAKECHECKUP_TEXT,
-                       STEP_1,
                        STEP_2,
-                       STEP_3,)
+                       STEP_3,
+                       TRY_MISS_STEP)
 from database.requests import (set_last_check_time,
                                set_user_action,
-                               get_user_payment_date,
                                create_step_progress,
                                update_step_progress,
                                get_current_step,
@@ -37,18 +34,17 @@ from database.requests import (set_last_check_time,
                                reset_user_achievements,
                                get_user_achievement_number,
                                get_user_check_text_number,
-                               set_user_check_number,
                                get_user_percent,
                                set_user_percent,
-                               check_promocode_is_active,
                                increase_user_percent_by_5,
-                               get_user_payment_date)
+                               get_user_payment_date,
+                               set_user_percent_and_number)
 
 
 check_router = Router()
 
 
-async def delete_previous_message(callback: CallbackQuery, text: str = "", sleep_time: float = 1.5)-> None:
+async def delete_previous_message(callback: CallbackQuery, sleep_time: float = 1.5)-> None:
     tg_id = callback.from_user.id
     await callback.bot.send_chat_action(chat_id=tg_id, action="typing")
     await asyncio.sleep(sleep_time)
@@ -62,20 +58,19 @@ def progress_bar(percent):
     return f"[{filled}{empty}] {percent}%"
 
 
-async def show_step_1(message: Message, session: AsyncSession, kb):
-    tg_id=message.from_user.id
+async def show_step_1(message: Message, session: AsyncSession, kb, tg_id):
     await run_first_check(message=message, session=session, tg_id=tg_id)
-    await message.answer(text=STEP_1, reply_markup=kb)
 
 
-async def show_step_2(message: Message, session: AsyncSession, kb):
+async def show_step_2(message: Message, session: AsyncSession, kb, tg_id):
     await message.answer_video(video="CgACAgIAAxkBAAIHVmgMoO_XoH5WrDWU5RUdxg3cdpMPAAINeAACWT5pSJKTFp5i2y-NNgQ",
                                caption=STEP_2,
-                               reply_markup=kb)
+                               reply_markup=kb,
+                               parse_mode="HTML")
 
 
-async def show_step_3(message: Message, session: AsyncSession, kb):
-    await message.answer(text=STEP_3, reply_markup=kb)
+async def show_step_3(message: Message, session: AsyncSession, kb, tg_id):
+    await message.answer(text=STEP_3, reply_markup=kb, parse_mode="HTML")
 
 
 STEP_FUNCTIONS = {
@@ -85,12 +80,12 @@ STEP_FUNCTIONS = {
 }
 
 
-async def show_step(message: Message, session: AsyncSession, step_id: str):
+async def show_step(message: Message, session: AsyncSession, step_id: str, tg_id: int):
     step_func = STEP_FUNCTIONS.get(step_id)
     if not step_func:
         await message.answer(text=END_PAY_CHECK)
     kb = get_step_action_kb(step_id)
-    await step_func(message, session, kb)
+    await step_func(message, session, kb, tg_id)
 
 
 
@@ -98,21 +93,20 @@ async def show_pay_check_menu(message: Message, chat_id: int, session: AsyncSess
     await set_user_action(session, chat_id, 'pay_check_menu')
     payment_date = await get_user_payment_date(session, chat_id)
 
-    text = (
-        f"✅ Ваша подписка активна до: {payment_date.strftime('%d.%m.%Y %H:%M')}\n\n"
-        f"{PAY_CHECK_TEMPLATE}"
-    )
-    price = 149 if await check_promocode_is_active(session, chat_id) else 199
+    text = PAY_CHECK_TEMPLATE.format(payment_date=payment_date.strftime('%d.%m.%Y %H:%M'))
 
     await message.answer(
         text=text,
-        reply_markup=pay_checking_menu(price)
+        reply_markup=pay_checking_menu()
     )
 
 
 async def checking_process(message: Message, tg_id: int, text: dict) -> None:
     """Имитация шагов проверки безопасности."""
-    message = await message.answer(text="Начинаем проверку безопасности...")
+    message = await message.answer(
+        text="🔍 <b>Начинаем проверку безопасности аккаунта...</b>",
+        parse_mode="HTML"
+    )
     total_steps = len(text)
     progress_message = await message.answer(progress_bar(0))
 
@@ -120,7 +114,7 @@ async def checking_process(message: Message, tg_id: int, text: dict) -> None:
         progress = (i / total_steps) * 100
         await progress_message.edit_text(progress_bar(int(progress)))
         await asyncio.sleep(random.uniform(1.0, 2.5))
-        await message.edit_text(text[i])
+        await message.edit_text(text[i], parse_mode="HTML")
 
     await progress_message.delete()
 
@@ -133,40 +127,37 @@ async def run_security_check(message: Message, tg_id: int, session: AsyncSession
     if user_text_number is None or user_percent is None:
         user_percent = random.randint(40,65)
         user_text_number = random.randint(1, 3)
-        await set_user_percent(session, tg_id, user_percent)
-        await set_user_check_number(session,tg_id, user_text_number)
-
-    text_template = CHECKUP_END.get(user_text_number, CHECKUP_END[1])
-    final_text = text_template.format(percent=user_percent)
-    print(f'фиктивная проверка {user_percent}, {is_paid}')
-    print(f"user_text_number = {user_text_number}, user_percent = {type(user_percent)}" )
+        await set_user_percent_and_number(session, tg_id, user_percent, user_text_number)
+    if user_percent == 100:
+        final_text = FINALCHKUP_END
+    else:
+        text_template = CHECKUP_END.get(user_text_number, CHECKUP_END[1])
+        final_text = text_template.format(percent=user_percent)
 
     await checking_process(message, tg_id, FAKECHECKUP_TEXT)
     await set_last_check_time(session, tg_id)
-    price = 149 if await check_promocode_is_active(session, tg_id) else 199
-    keyboard = pay_checking_menu(price) if is_paid else free_checking_menu
-    await message.answer(final_text, reply_markup=keyboard)
+    keyboard = pay_checking_menu() if is_paid else free_checking_menu
+    await message.answer(final_text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def run_first_check(message: Message, session: AsyncSession, tg_id: int):
     """Фиктивная проверка безопасности (платная)."""
     user_text_number = await get_user_check_text_number(session, tg_id)
     user_percent = await get_user_percent(session, tg_id)
-    if not user_text_number and not user_percent:
+    if user_text_number is None or user_percent is None:
         user_percent = random.randint(40,65)
         user_text_number = random.randint(1, 3)
-        await set_user_percent(session, tg_id, user_percent)
-        await set_user_check_number(session,tg_id, user_text_number)
+        await set_user_percent_and_number(session, tg_id, user_percent, user_text_number)
     await checking_process(message, tg_id, CHECKUP_TEXT)
     text_template = CHECKUP_END.get(user_text_number, CHECKUP_END[1])
     final_text = text_template.format(percent=user_percent)
-    await message.answer(final_text, parse_mode="Markdown", reply_markup=first_pay_check_kb("step_1"))
+    await message.answer(final_text, parse_mode="HTML", reply_markup=first_pay_check_kb("step_1"))
 
 
 async def run_final_check(message: Message, tg_id: int, session: AsyncSession):
     """Окончательная проверка безопасности (платная)."""
     await checking_process(message, tg_id, FINALCHKUP_TEXT)
-    await message.answer(FINALCHKUP_END)
+    await message.answer(FINALCHKUP_END, parse_mode="HTML")
     await set_user_percent(session, tg_id, 100)
 
 
@@ -190,15 +181,11 @@ async def handle_paid_user(callback: CallbackQuery, session: AsyncSession):
 
 
 @check_router.callback_query(F.data == "pay_check")
-async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession, bot: Bot):
+async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession):
     tg_id = callback.from_user.id
     await set_user_action(session, tg_id, 'pay_check_action')
-    # проверяем, на каком шаге юзер
     current_step = await get_current_step(session, tg_id)
-    # если шагов нет, создаем и действуем по порядку
-    # шаг 1 - провести проверку и перейти к шагу два
-    # шаг два - рекомендовать провести 2FA и проверить активные сессии
-    # шаг три повторная проверка
+    await callback.answer()
     if current_step:
         progress = await get_step_progress(session, tg_id, current_step)
         if progress == "completed":
@@ -211,20 +198,20 @@ async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession,
     if not current_step:
         current_step = "step_1"
         await create_step_progress(session, tg_id, current_step, status="started")
-    # если шаги есть, то проверяем прогресс последнего шага
-    await show_step(callback.message, session, current_step)
-    # если последний шаг "completed" то все шаги завершены и мы обнуляем проверку
-    await callback.answer()
+    await show_step(callback.message, session, current_step, tg_id)
 
 
 @check_router.callback_query(F.data == "pay_check")
 async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession, state: FSMContext):
     tg_id = callback.from_user.id
     await set_user_action(session, tg_id, 'pay_check_action')
+    print('1')
     current_step = await get_current_step(session, tg_id)
-
+    print('2')
     if current_step:
+        print('1')
         progress = await get_step_progress(session, tg_id, current_step)
+        print('2')
         if progress == "completed":
             await delete_user_steps(session, tg_id)
             await reset_user_achievements(session, tg_id)
@@ -234,11 +221,7 @@ async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession,
     if not current_step:
         current_step = "step_1"
         await create_step_progress(session, tg_id, current_step, status="started")
-
-    if current_step == "step_1":
-        await run_first_check(callback.bot, tg_id)
-
-    await show_step(callback.message, current_step)
+    await show_step(callback.message, session, current_step, tg_id)
     await callback.answer()
 
 
@@ -256,7 +239,7 @@ async def handle_step_done(callback: CallbackQuery, session: AsyncSession):
     tg_id = callback.from_user.id
     step_id = callback.data.split(":")[1]
     await increase_user_percent_by_5(session, tg_id)
-    await delete_previous_message(callback, text="🕵️‍♂️️ Проверяем, как вы улучшили свою безопасность...")
+    await delete_previous_message(callback)
 
     await update_step_progress(session, tg_id, step_id, status="completed")
     await increase_user_achievement_number(session, tg_id)
@@ -264,7 +247,7 @@ async def handle_step_done(callback: CallbackQuery, session: AsyncSession):
 
     if next_step:
         await create_step_progress(session, tg_id, next_step, status="started")
-        await show_step(callback.message, session, next_step)
+        await show_step(callback.message, session, next_step, tg_id)
     else:
         await run_final_check(callback.message, tg_id, session)
         await callback.message.answer("🥳 Вы прошли все шаги! Ваш аккаунт максимально защищён.",
@@ -273,17 +256,15 @@ async def handle_step_done(callback: CallbackQuery, session: AsyncSession):
 
 
 @check_router.callback_query(F.data.startswith("miss_step:"))
-async def handle_more_info(callback: CallbackQuery, state: FSMContext):
+async def handle_more_info(callback: CallbackQuery):
     tg_id = callback.from_user.id
     step_id = callback.data.split(":")[1]
     await delete_previous_message(callback,
-                                  text="",
                                   sleep_time=0.5)
 
-    await callback.message.answer(f"ℹ️ Нельзя пропустить, ваша безопасность стоит одной минутки: \n\n"
-                                  f"К тому же думать полезно\n\n"
-                                  f"Выполните шаг {step_id} позязя)",
-                                  reply_markup=get_miss_action_kb(step_id))
+    await callback.message.answer(TRY_MISS_STEP,
+                                  reply_markup=get_miss_action_kb(step_id),
+                                  parse_mode="HTML")
     await callback.answer()
 
 
@@ -292,5 +273,5 @@ async def handle_check_paid_user(callback: CallbackQuery, session: AsyncSession)
     step_id = callback.data.split(":")[1]
     tg_id = callback.from_user.id
     await delete_previous_message(callback, sleep_time=0)
-    await show_step(callback.message, session, step_id)
+    await show_step(callback.message, session, step_id, tg_id)
     await callback.answer()

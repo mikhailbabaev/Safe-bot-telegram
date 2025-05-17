@@ -18,6 +18,7 @@ Safe_bot_tg/
 │   │   └── states.py         # FSM состояния
 │   ├── database/                 # Логика работы с базой данных
 │   │   ├── __init__.py
+│   │   ├── db_utils
 │   │   ├── db_helper.py          # Работа с подключением к базе данных
 │   │   ├── base.py               # Базовый класс для всех таблиц
 │   │   ├── models.py             # Создание моделей таблиц
@@ -46,6 +47,8 @@ Safe_bot_tg/
 │   ├── .env-template
 │   ├── __init__.py
 │   ├── app.log
+├── migration/
+├── alembic.ini
 ├── requirements.txt              # Список зависимостей
 ├── .gitignore                    # Игнорируемые файлы
 ├── dockerfile

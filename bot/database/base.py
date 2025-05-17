@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr
-from utils import camel_case_to_snake
+from bot.database.db_utils import camel_case_to_snake
 
 
 class Base(DeclarativeBase):

@@ -1,8 +1,8 @@
 from sqlalchemy import Integer, String, Boolean, DateTime, Text, BigInteger, func, Float
 from sqlalchemy.orm import Mapped, mapped_column
-from database.base import Base
+from bot.database.base import Base
 from datetime import datetime
-from utils import fk
+from bot.database.db_utils import fk
 
 
 class User(Base):

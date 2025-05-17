@@ -26,5 +26,6 @@ ENV PYTHONUNBUFFERED=1
 RUN python -m venv venv
 ENV PATH="/app/venv/bin:$PATH"
 
+RUN chmod +x start.sh
 # Команда для запуска бота
-CMD ["python", "bot/main.py"]
+CMD ["./start.sh"]
